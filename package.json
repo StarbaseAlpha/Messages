@@ -1,8 +1,9 @@
 {
   "name": "@starbase/messages",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Starbase Messages",
   "main": "index.js",
+  "browser":"messages.min.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
