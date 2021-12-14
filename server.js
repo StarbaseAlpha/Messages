@@ -86,8 +86,7 @@ function Messages(encryption, db, push=null, options={}) {
       "anonToken": anonToken,
       "userToken": userToken
     };
-    let sealed = await serverUser.sealEnvelope(card.user||"", payload).catch(err=>{console.log(err);return null;});
-console.log(sealed);
+    let sealed = await serverUser.sealEnvelope(card.user||"", payload).catch(err=>{return null;});
     return sealed;
   };
 
