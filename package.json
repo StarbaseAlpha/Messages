@@ -1,0 +1,31 @@
+{
+  "name": "@starbase/messages",
+  "version": "0.0.1",
+  "description": "Starbase Messages",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/starbasealpha/messages.git"
+  },
+  "keywords": [
+    "starbase",
+    "messsages",
+    "end-to-end",
+    "encrypted",
+    "messaging",
+    "inbox"
+  ],
+  "author": "Mike Fuller",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/starbasealpha/messages/issues"
+  },
+  "homepage": "https://github.com/starbasealpha/messages#readme",
+  "dependencies": {
+    "express": "latest"
+  }
+}
