@@ -244,7 +244,7 @@ function Messages(encryption, db, push=null, options={}) {
     if (inbox.data.sub && push && typeof push.send === 'function') {
       let sub = await db.path(parentChannel).path('push').path(inbox.data.sub).get().catch(err=>{return null;});
       if (sub) {
-        push.send(sub.data, {"title":"New Secure Message!", "body":"You have unread messages.", "badge":"https://www.themike.org/icons/notify-icon.png", "data":{"url":"/messages"}});
+        push.send(sub.data, {"title":"New Secure Message!", "body":"You have unread messages.", "data":{"url":"/messages"}});
       }
     }
     sockSend({"to":msg.to, "timestamp":timestamp});
