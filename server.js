@@ -238,7 +238,6 @@ function Messages(encryption, db, push=null, options={}) {
     let id = ('000' + timestamp.toString() + cryptic.toHex(cryptic.random(16)).slice(0,32));
     let idc = ('000' + timestamp.toString() + cryptic.toHex(cryptic.random(16)).slice(0,32));
     await db.path(parentChannel).path('users').path(msg.to).path('messages').path(id).put(msg);
-    await db.path(parentChannel).path('count').path(idc).put({"timestamp":timestamp});
     if (onSend && typeof onSend === 'function') {
       onSend({"to":msg.to, "timestamp":timestamp});
     }
