@@ -169,14 +169,16 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     let response = await REQUEST('messages', sealed);
     if (!response) {
       return Promise.reject({"code":400,"message":"Failed to open envelope."});
-    } else{
+    } else {
       let msgs = [];
       let ids = [];
       for(let i = 0; i < response.data.length; i++) {
         response.data[i].data.timestamp = new Date(parseInt(response.data[i].key.slice(3,16))).getTime();
         let msg = await readMessage(response.data[i].data, opk);
         ids.push(response.data[i].key);
-        msgs.push(msg);
+        if (msg && !msg.protocol) {
+          msgs.push(msg);
+        }
       }
       if (ids.length) {
         await acknowledgeMessages(ids);
@@ -204,20 +206,23 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     gotMessagesHandler = cb;
   };
 
-  const saveReadMessage = async (contact, message) => {
+  const saveReadMessage = async (contact, message, protocol=false) => {
     let msg = {
       "to": user.getID(),
       "from":contact,
       "plaintext":message.plaintext,
       "timestamp":message.timestamp,
-      "status":"received"
+      "status":"received",
+      "protocol":protocol
     };
-    let save = await db.path(parentChannel).path('/contacts').path(contact).path('messages').path(message.timestamp).put(msg);
-    if (saveHandler && typeof saveHandler === 'function') {
-      saveHandler({
-        "path":save.path,
-        "msg":msg
-      });
+    if (!message.protocol) {
+      let save = await db.path(parentChannel).path('/contacts').path(contact).path('messages').path(message.timestamp).put(msg);
+      if (saveHandler && typeof saveHandler === 'function') {
+        saveHandler({
+          "path":save.path,
+          "msg":msg
+        });
+      }
     }
 //    let profile = await db.path(parentChannel).path('/contacts').path(contact).get().catch(err=>{return null;});
 //    msg.profile = profile.data || {};
@@ -240,16 +245,14 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
       let read = await session.read(opened.plaintext).catch(err=>{return null;});
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read);
+        saved = await saveReadMessage(opened.from, read, env.protocol||false);
         await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
       } else {
-console.log('shenanigans');
         if (opened.plaintext.init) {
           await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
           session = await user.openSession(opened.plaintext.init, opk.secret);
           opk.used = true;
         } else {
-console.log('stale shenanigans');
           let stale = await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').get().catch(err=>{return null;});
           if (stale) {
             await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
@@ -259,10 +262,8 @@ console.log('stale shenanigans');
         read = await session.read(opened.plaintext).catch(err=>{return null;});
         if (read) {
           read.timestamp = env.timestamp;
-          saved = await saveReadMessage(opened.from, read);
+          saved = await saveReadMessage(opened.from, read, env.protocol||false);
           await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
-        } else {
-          console.log('failed to read from ' + opened.from);
         }
       }
       return saved;
@@ -281,7 +282,7 @@ console.log('stale shenanigans');
       let read = await session.read(opened.plaintext).catch(err=>{return null;});
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read);
+        saved = await saveReadMessage(opened.from, read, env.protocol||false);
         await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
       } else {
         console.log('failed to read from ' + opened.from);
