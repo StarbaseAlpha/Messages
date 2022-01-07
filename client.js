@@ -1,6 +1,6 @@
 'use strict';
 
-function Messages(encryption, db, serverURL, userData = null, sock=null, push=null, options={}) {
+function Messages(encryption, db, serverURL, userData = null, sock = null, push = null, options = {}) {
   let token = null;
   let serverIDK = null;
   let user = null;
@@ -13,13 +13,15 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
 
   const REQUEST = async (method, payload) => {
     return fetch(serverURL + '/' + method, {
-      "method":"POST",
-      "headers":{"content-type":"application/json"},
-      "body":JSON.stringify(payload)
-    }).then(async response=>{
+      "method": "POST",
+      "headers": {
+        "content-type": "application/json"
+      },
+      "body": JSON.stringify(payload)
+    }).then(async response => {
       let result = await response.json();
       if (response.statusCode > 399) {
-        throw(result);
+        throw (result);
         return null;
       }
       return result;
@@ -37,12 +39,18 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
   const resetContact = async (userID) => {
     await db.path(parentChannel).path('/contacts').path(userID).path('session').del();
     await db.path(parentChannel).path('/contacts').path(userID).path('stale').del();
-    await sendMessage(userID, {"reset":true});
-    return {"reset":true}; 
+    await sendMessage(userID, {
+      "reset": true
+    }, true);
+    return {
+      "reset": true
+    };
   };
 
-  const updateContact = async (userID, profile={}, unread=false) => {
-    let exists = await db.path(parentChannel).path('/contacts').path(userID).get().catch(err=>{return null;});
+  const updateContact = async (userID, profile = {}, unread = false) => {
+    let exists = await db.path(parentChannel).path('/contacts').path(userID).get().catch(err => {
+      return null;
+    });
     let updated = profile || {};
     updated.timestamp = Date.now();
     updated.unread = unread || false;
@@ -62,18 +70,16 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     return db.path(parentChannel).path('/contacts').path(userID).del();
   };
 
-  const setProfile = async (name, photo) => {
-    await db.path(parentChannel).path('/profile').put({"name":name, "photo":photo, "timestamp":Date.now(), "random":cryptic.toHex(cryptic.random(32))});
-    await getMessages(0);
-    return await db.path(parentChannel).path('/profile').get();
-  };
-
   const loadUser = async () => {
     if (userData) {
-      user = await encryption.loadUser(userData).catch(err=>{return null;});
+      user = await encryption.loadUser(userData).catch(err => {
+        return null;
+      });
     }
     if (!user) {
-      let exists = await db.path(parentChannel).path('/user').get().catch(err=>{return null;});
+      let exists = await db.path(parentChannel).path('/user').get().catch(err => {
+        return null;
+      });
       if (exists) {
         user = await encryption.loadUser(exists.data);
       }
@@ -90,7 +96,9 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
   };
 
   const loadOPK = async () => {
-    let opkData = await db.path(parentChannel).path('/user/opk').get().catch(err=>{return null;});
+    let opkData = await db.path(parentChannel).path('/user/opk').get().catch(err => {
+      return null;
+    });
     if (!opkData) {
       return await updateOPK();
     }
@@ -109,27 +117,38 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
   };
 
   const getToken = async (type) => {
-    let tokenData = await db.path(parentChannel).path('/token').path(user.getID()).get().then(result=>{return result.data;}).catch(err=>{return null;});
+    let tokenData = await db.path(parentChannel).path('/token').path(user.getID()).get().then(result => {
+      return result.data;
+    }).catch(err => {
+      return null;
+    });
     if (tokenData && tokenData.decoded && tokenData.decoded.exp > parseInt(Date.now() / 1000)) {
       serverIDK = tokenData.serverIDK;
       return tokenData[type + 'Token'];
     }
-    return await hello().then(result=>{
-      return result[type + "Token"]||null;
-    }).catch(err=>{
-      throw({"error":"Could not obtain a token from the server."});
+    return await hello().then(result => {
+      return result[type + "Token"] || null;
+    }).catch(err => {
+      throw ({
+        "error": "Could not obtain a token from the server."
+      });
     });
   };
 
-  const acknowledgeMessages = async (ids=[]) => {
+  const acknowledgeMessages = async (ids = []) => {
     if (!user) {
       await loadUser(userData);
     }
     let token = await getToken('user');
     if (!token) {
-      return Promise.reject({"error":"Invalid or expired token."});
+      return Promise.reject({
+        "error": "Invalid or expired token."
+      });
     }
-    let sealed = await user.sealEnvelope(getServerIDK(), {"token":token, "ids":ids});
+    let sealed = await user.sealEnvelope(getServerIDK(), {
+      "token": token,
+      "ids": ids
+    });
     let response = await REQUEST('acknowledge', sealed);
     return response;
   };
@@ -140,40 +159,50 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     }
     let token = await getToken('user');
     if (!token) {
-      return Promise.reject({"error":"Invalid or expired token."});
+      return Promise.reject({
+        "error": "Invalid or expired token."
+      });
     }
-    let sealed = await user.sealEnvelope(getServerIDK(), {"opk":opk.card.opk,"token":token});
+    let sealed = await user.sealEnvelope(getServerIDK(), {
+      "opk": opk.card.opk,
+      "token": token
+    });
     let response = await REQUEST('opk', sealed);
   };
 
-  const getMessages = async (limit=100) => {
+  const getMessages = async (limit = 100) => {
     if (!user) {
       await loadUser(userData);
     }
     let token = await getToken('user');
     if (!token) {
-      return Promise.reject({"error":"Invalid or expired token."});
+      return Promise.reject({
+        "error": "Invalid or expired token."
+      });
     }
-    let subscriptionExists = await db.path(parentChannel).path('/push').get().catch(err=>{return null;});
+    let subscriptionExists = await db.path(parentChannel).path('/push').get().catch(err => {
+      return null;
+    });
     let sub = null;
     if (subscriptionExists) {
       sub = subscriptionExists.data.subscription.keys.auth;
     }
-    let profileExists = await db.path(parentChannel).path('/profile').get().catch(err=>{return null;});
-    let profileKey = null;
-    if (profileExists) {
-      let data = user.getID() + profileExists.data.name + profileExists.data.photo + profileExists.data.timestamp + profileExists.data.random;
-      profileKey = await cryptic.digest(cryptic.fromText(data));
-    }
-    let sealed = await user.sealEnvelope(getServerIDK(), {"token":token, "limit":parseInt(limit),"sub":sub, "profileKey":profileKey});
+    let sealed = await user.sealEnvelope(getServerIDK(), {
+      "token": token,
+      "limit": parseInt(limit),
+      "sub": sub
+    });
     let response = await REQUEST('messages', sealed);
     if (!response) {
-      return Promise.reject({"code":400,"message":"Failed to open envelope."});
+      return Promise.reject({
+        "code": 400,
+        "message": "Failed to open envelope."
+      });
     } else {
       let msgs = [];
       let ids = [];
-      for(let i = 0; i < response.data.length; i++) {
-        response.data[i].data.timestamp = new Date(parseInt(response.data[i].key.slice(3,16))).getTime();
+      for (let i = 0; i < response.data.length; i++) {
+        response.data[i].data.timestamp = new Date(parseInt(response.data[i].key.slice(3, 16))).getTime();
         let msg = await readMessage(response.data[i].data, opk);
         ids.push(response.data[i].key);
         if (msg && !msg.protocol) {
@@ -206,27 +235,33 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     gotMessagesHandler = cb;
   };
 
-  const saveReadMessage = async (contact, message, protocol=false) => {
+  const saveReadMessage = async (contact, message, protocol = false) => {
     let msg = {
       "to": user.getID(),
-      "from":contact,
-      "plaintext":message.plaintext,
-      "timestamp":message.timestamp,
-      "status":"received",
-      "protocol":protocol
+      "from": contact,
+      "plaintext": message.plaintext,
+      "timestamp": message.timestamp,
+      "status": "received",
     };
-    if (!message.protocol) {
+    if (!protocol) {
       let save = await db.path(parentChannel).path('/contacts').path(contact).path('messages').path(message.timestamp).put(msg);
       if (saveHandler && typeof saveHandler === 'function') {
         saveHandler({
-          "path":save.path,
-          "msg":msg
+          "path": save.path,
+          "msg": msg
         });
       }
+      return msg;
     }
-//    let profile = await db.path(parentChannel).path('/contacts').path(contact).get().catch(err=>{return null;});
-//    msg.profile = profile.data || {};
-    return msg;
+    if (protocol) {
+      if (msg.plaintext && msg.plaintext.reset) {
+        console.log('resetting session...');
+        await db.path(parentChannel).path('/contacts').path(contact).path('session').del();
+        await db.path(parentChannel).path('/contacts').path(contact).path('stale').del();
+        return null;
+      }
+      return null;
+    }
   };
 
   const readMessage = async (env) => {
@@ -235,43 +270,64 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     if (opened.plaintext && opened.plaintext.init && opened.plaintext.init.from && opened.from !== opened.plaintext.init.from) {
       return null;
     }
-    let userExists = await db.path(parentChannel).path('/contacts').path(opened.from).get().catch(err=>{return null;});
+    let userExists = await db.path(parentChannel).path('/contacts').path(opened.from).get().catch(err => {
+      return null;
+    });
     if (userExists && userExists.data.blocked) {
       return null;
     }
-    let exists = await db.path(parentChannel).path('/contacts').path(opened.from).path('session').get().catch(err=>{return null;});
+    let exists = await db.path(parentChannel).path('/contacts').path(opened.from).path('session').get().catch(err => {
+      return null;
+    });
     if (exists) {
       let session = await user.loadSession(exists.data);
-      let read = await session.read(opened.plaintext).catch(err=>{return null;});
+      let read = await session.read(opened.plaintext).catch(err => {
+        return null;
+      });
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read, env.protocol||false);
-        await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+        saved = await saveReadMessage(opened.from, read, env.protocol || false);
+        if (!env.protocol) {
+          await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+        }
       } else {
         if (opened.plaintext.init) {
-          await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
+          if (!env.protocol) {
+            await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
+          }
           session = await user.openSession(opened.plaintext.init, opk.secret);
           opk.used = true;
         } else {
-          let stale = await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').get().catch(err=>{return null;});
+          let stale = await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').get().catch(err => {
+            return null;
+          });
           if (stale) {
-            await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
+            if (!env.protocol) {
+              await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').put(session.save());
+            }
             session = await user.loadSession(stale.data);
           }
         }
-        read = await session.read(opened.plaintext).catch(err=>{return null;});
+        read = await session.read(opened.plaintext).catch(err => {
+          return null;
+        });
         if (read) {
           read.timestamp = env.timestamp;
-          saved = await saveReadMessage(opened.from, read, env.protocol||false);
-          await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+          saved = await saveReadMessage(opened.from, read, env.protocol || false);
+          if (!env.protocol) {
+            await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+          }
         }
       }
       return saved;
     } else {
       let session = null;
       if (!opened.plaintext.init) {
-        let stale = await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').get().catch(err=>{return null;});
+        let stale = await db.path(parentChannel).path('/contacts').path(opened.from).path('stale').get().catch(err => {
+          return null;
+        });
         if (!stale) {
+          await resetContact(opened.from).catch(err=>{return null;});
           return null;
         }
         session = await user.loadSession(stale.data);
@@ -279,13 +335,17 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
         session = await user.openSession(opened.plaintext.init, opk.secret);
         opk.used = true;
       }
-      let read = await session.read(opened.plaintext).catch(err=>{return null;});
+      let read = await session.read(opened.plaintext).catch(err => {
+        return null;
+      });
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read, env.protocol||false);
-        await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+        saved = await saveReadMessage(opened.from, read, env.protocol || false);
+        if (!env.protocol) {
+          await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
+        }
       } else {
-        console.log('failed to read from ' + opened.from);
+        await resetContact(opened.from).catch(err=>{return null;});
       }
       return saved;
     }
@@ -295,14 +355,16 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     return user.getID();
   };
 
-  const sendMessage = async (to, msg) => {
+  const sendMessage = async (to, msg, protocol = false) => {
     if (!user) {
       await loadUser(userData);
     }
 
     let token = await getToken('anon');
 
-    let exists = await db.path(parentChannel).path('/contacts').path(to).path('session').get().catch(err=>{return null;});
+    let exists = await db.path(parentChannel).path('/contacts').path(to).path('session').get().catch(err => {
+      return null;
+    });
     let session = null;
     if (exists) {
       session = await user.loadSession(exists.data);
@@ -313,20 +375,31 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     }
     let send = await session.send(msg);
     let sealed = await user.sealEnvelope(to, send);
+    if (protocol) {
+      sealed.protocol = true;
+    }
 
-    let sent = await REQUEST('send', {token, "msg":sealed}).catch(err=>{return null;});
+    let sent = await REQUEST('send', {
+      token,
+      "msg": sealed
+    }).catch(err => {
+      return null;
+    });
     if (sent) {
       await db.path(parentChannel).path('/contacts').path(to).path('session').put(session.save());
       await db.path(parentChannel).path('/contacts').path(to).path('messages').path(sent.timestamp).put({
-        "to":to,
-        "from":user.getID(),
-        "plaintext":msg,
-        "timestamp":sent.timestamp,
-        "status":"sent"
+        "to": to,
+        "from": user.getID(),
+        "plaintext": msg,
+        "timestamp": sent.timestamp,
+        "status": "sent"
       });
       return Promise.resolve(sent);
     } else {
-      return Promise.reject({"code":400, "message":"Failed to send message!"});
+      return Promise.reject({
+        "code": 400,
+        "message": "Failed to send message!"
+      });
     }
   };
 
@@ -336,19 +409,30 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
     }
 
     let token = await getToken('anon');
-    return REQUEST('card', {"token":token, "msg":{"id":id}}).catch(err=>{return null;});
+    return REQUEST('card', {
+      "token": token,
+      "msg": {
+        "id": id
+      }
+    }).catch(err => {
+      return null;
+    });
   };
 
   const connect = async () => {
     if (sock) {
       sock.onError(console.log);
-      sock.onState(async (s)=>{if(s === 'connected'){
-        sock.send({
-          "id":user.getID(),
-          "token":await getToken('user')
-        });
-      }});
-      sock.onMessage(async ()=>{await getMessages()});
+      sock.onState(async (s) => {
+        if (s === 'connected') {
+          sock.send({
+            "id": user.getID(),
+            "token": await getToken('user')
+          });
+        }
+      });
+      sock.onMessage(async () => {
+        await getMessages()
+      });
       if (!sock.getState()) {
         sock.connect();
       }
@@ -370,7 +454,7 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
       "anonToken": anonToken,
       "userToken": userToken,
       "decoded": decoded,
-      "serverIDK":opened.from
+      "serverIDK": opened.from
     });
     return {
       anonToken,
@@ -381,40 +465,77 @@ function Messages(encryption, db, serverURL, userData = null, sock=null, push=nu
 
   const subscribe = async (e) => {
     if (!push) {
-      return {"supported":false};
+      return {
+        "supported": false
+      };
     }
-    const allowed = push.getPermission().then(result=>{return (result === 'granted');}).catch(err=>{return false;});
+    const allowed = push.getPermission().then(result => {
+      return (result === 'granted');
+    }).catch(err => {
+      return false;
+    });
     if (!allowed) {
       return null;
     }
-    return await push.subscribe(serverURL + '/push/subscribe').then(async result=>{
-      return await db.path(parentChannel).path('/push').put({subscription:result.subscription}).then(saved=>{
-        return {"subscribed":true};
+    return await push.subscribe(serverURL + '/push/subscribe').then(async result => {
+      return await db.path(parentChannel).path('/push').put({
+        subscription: result.subscription
+      }).then(saved => {
+        return {
+          "subscribed": true
+        };
       });
     });
   };
 
   const unsubscribe = async (e) => {
     if (!push) {
-      return {"supported":false};
+      return {
+        "supported": false
+      };
     }
-    return await push.unsubscribe(serverURL + '/push/unsubscribe').then(async result=>{
-      return await db.path(parentChannel).path('/push').del().then(deleted=>{
-        return {"unsubscribed":true};
+    return await push.unsubscribe(serverURL + '/push/unsubscribe').then(async result => {
+      return await db.path(parentChannel).path('/push').del().then(deleted => {
+        return {
+          "unsubscribed": true
+        };
       });
     });
   };
 
   const getContact = async (userID) => {
-    return await db.path(parentChannel).path('/contacts').path(userID).get().then(result=>{
+    return await db.path(parentChannel).path('/contacts').path(userID).get().then(result => {
       return result.data;
-    }).catch(err=>{return null});
+    }).catch(err => {
+      return null
+    });
   };
 
   const isSubscribed = async () => {
-    return await db.path(parentChannel).path('/push').get().then(result=>{return true}).catch(err=>{return false;});
+    return await db.path(parentChannel).path('/push').get().then(result => {
+      return true
+    }).catch(err => {
+      return false;
+    });
   };
 
-  return {getMessages, sendMessage, getID, getToken, listContacts, updateContact, resetContact, deleteContact, listMessages, onSave, connect, subscribe, unsubscribe, getContact, isSubscribed, setProfile, onGotMessages};
+  return {
+    getMessages,
+    sendMessage,
+    getID,
+    getToken,
+    listContacts,
+    updateContact,
+    resetContact,
+    deleteContact,
+    listMessages,
+    onSave,
+    connect,
+    subscribe,
+    unsubscribe,
+    getContact,
+    isSubscribed,
+    onGotMessages
+  };
 
 }
