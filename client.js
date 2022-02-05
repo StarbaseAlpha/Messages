@@ -168,6 +168,27 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       "token": token
     });
     let response = await REQUEST('opk', sealed);
+    return response;
+  };
+
+  const deleteMe = async () => {
+    if (!user) {
+      await loadUser(userData);
+    }
+    let token = await getToken('user');
+    if (!token) {
+      return Promise.reject({
+        "error": "Invalid or expired token."
+      });
+    }
+    let sealed = await user.sealEnvelope(getServerIDK(), {
+      "delete":user.getID(),
+      "token":token
+    });
+    let response = await REQUEST('deleteme', sealed);
+    await unsubscribe();
+    await db.path(parentPath).del();
+    return response;
   };
 
   const getMessages = async (limit = 100) => {
@@ -529,6 +550,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     resetContact,
     deleteContact,
     listMessages,
+    deleteMe,
     onSave,
     connect,
     subscribe,

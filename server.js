@@ -201,6 +201,21 @@ function Messages(encryption, db, push=null, options={}) {
     });
   });
 
+  router.use('/deleteme', async (req, res) => {
+    await Load();
+    let env = req.body || {};
+    await open(env).then(async result=>{
+      let userID = result.from;
+      if (!result.plaintext || !result.plaintext.delete || result.plaintext.delete !== userID) {
+        return res.status(400).json({"code":400, "message":"Server could not read request!"});
+      }
+      await db.path(parentChannel).path('users').path(userID).del();
+      res.json({"message":"The user has been deleted from the server."});
+    }).catch(err=>{
+      res.status(400).json({"code":400, "message":"Server could not read request!"});
+    });
+  });
+
   router.use('/acknowledge', async (req, res) => {
     await Load();
     let env = req.body || {};
