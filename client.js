@@ -187,7 +187,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     });
     let response = await REQUEST('deleteme', sealed);
     await unsubscribe();
-    await db.path(parentPath).del();
+    await db.path(parentChannel).del();
     return response;
   };
 
@@ -276,7 +276,6 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     }
     if (protocol) {
       if (msg.plaintext && msg.plaintext.reset) {
-        console.log('resetting session...');
         await db.path(parentChannel).path('/contacts').path(contact).path('session').del();
         await db.path(parentChannel).path('/contacts').path(contact).path('stale').del();
         return null;
@@ -442,7 +441,6 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
 
   const connect = async () => {
     if (sock) {
-      sock.onError(console.log);
       sock.onState(async (s) => {
         if (s === 'connected') {
           sock.send({
