@@ -41,10 +41,19 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     await db.path(parentChannel).path('/contacts').path(userID).path('stale').del();
     await sendMessage(userID, {
       "reset": true
-    }, true);
+    }, true).catch(err=>{return null;});
     return {
       "reset": true
     };
+  };
+
+  const clearConversation = async (userID) => {
+    if (userID) {
+      await db.path(parentChannel).path('/contacts').path(userID).path('messages').del();
+      return true;
+    } else {
+      return false;
+    }
   };
 
   const updateContact = async (userID, profile = {}, unread = false) => {
@@ -67,7 +76,9 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
   };
 
   const deleteContact = async (userID) => {
-    return db.path(parentChannel).path('/contacts').path(userID).del();
+    await messages.resetContact(userID).catch(err=>{return null;});
+    await db.path(parentChannel).path('/contacts').path(userID).del();
+    return true;
   };
 
   const loadUser = async () => {
@@ -407,13 +418,15 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     });
     if (sent) {
       await db.path(parentChannel).path('/contacts').path(to).path('session').put(session.save());
-      await db.path(parentChannel).path('/contacts').path(to).path('messages').path(sent.timestamp).put({
-        "to": to,
-        "from": user.getID(),
-        "plaintext": msg,
-        "timestamp": sent.timestamp,
-        "status": "sent"
-      });
+      if (!protocol) {
+        await db.path(parentChannel).path('/contacts').path(to).path('messages').path(sent.timestamp).put({
+          "to": to,
+          "from": user.getID(),
+          "plaintext": msg,
+          "timestamp": sent.timestamp,
+          "status": "sent"
+        });
+      }
       return Promise.resolve(sent);
     } else {
       return Promise.reject({
@@ -548,6 +561,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     resetContact,
     deleteContact,
     listMessages,
+    clearConversation,
     deleteMe,
     onSave,
     connect,
@@ -555,7 +569,8 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     unsubscribe,
     getContact,
     isSubscribed,
-    onGotMessages
+    onGotMessages,
+    "db":db
   };
 
 }
