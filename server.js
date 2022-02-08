@@ -209,6 +209,10 @@ function Messages(encryption, db, push=null, options={}) {
       if (!result.plaintext || !result.plaintext.delete || result.plaintext.delete !== userID) {
         return res.status(400).json({"code":400, "message":"Server could not read request!"});
       }
+      let valid = await validateToken(result.plaintext.token||null, userID);
+      if (!valid) {
+        return res.status(400).json({"code":400, "message":"Token is expired or invalid."});
+      }
       await db.path(parentChannel).path('users').path(userID).del();
       res.json({"message":"The user has been deleted from the server."});
     }).catch(err=>{
