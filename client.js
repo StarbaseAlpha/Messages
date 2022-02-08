@@ -197,7 +197,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       "token":token
     });
     let response = await REQUEST('deleteme', sealed);
-    await unsubscribe();
+    await unsubscribe().catch(err=>{return null;});
     await db.path(parentChannel).del();
     return response;
   };
