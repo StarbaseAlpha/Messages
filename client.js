@@ -386,7 +386,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     return user.getID();
   };
 
-  const sendMessage = async (to, msg, protocol = false) => {
+  const sendMessage = async (to, msg, protocol = false, composeOnly=false) => {
     if (!user) {
       await loadUser(userData);
     }
@@ -410,12 +410,19 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       sealed.protocol = true;
     }
 
-    let sent = await REQUEST('send', {
-      token,
-      "msg": sealed
-    }).catch(err => {
-      return null;
-    });
+    let sent = false;
+
+    if (!composeOnly) {
+      sent = await REQUEST('send', {
+        token,
+        "msg": sealed
+      }).catch(err => {
+        return null;
+      });
+    } else {
+      sent = {"timestamp":Date.now()};
+    }
+
     if (sent) {
       await db.path(parentChannel).path('/contacts').path(to).path('session').put(session.save());
       if (!protocol) {
@@ -426,6 +433,10 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
           "timestamp": sent.timestamp,
           "status": "sent"
         });
+      }
+      if (composeOnly) {
+        sealed.timestamp = sent.timestamp;
+        return Promise.resolve(sealed);
       }
       return Promise.resolve(sent);
     } else {
@@ -553,6 +564,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
 
   return {
     getMessages,
+    readMessage,
     sendMessage,
     getID,
     getToken,
