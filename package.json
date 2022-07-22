@@ -1,6 +1,6 @@
 {
   "name": "@starbase/messages",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Starbase Messages",
   "main": "index.js",
   "browser":"messages.min.js",
@@ -25,8 +25,5 @@
   "bugs": {
     "url": "https://github.com/starbasealpha/messages/issues"
   },
-  "homepage": "https://github.com/starbasealpha/messages#readme",
-  "dependencies": {
-    "express": "latest"
-  }
+  "homepage": "https://github.com/starbasealpha/messages#readme"
 }
