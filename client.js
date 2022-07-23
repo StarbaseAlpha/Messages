@@ -235,7 +235,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       let ids = [];
       for (let i = 0; i < response.data.length; i++) {
         response.data[i].data.timestamp = new Date(parseInt(response.data[i].key.slice(3, 16))).getTime();
-        let msg = await readMessage(response.data[i].data, opk);
+        let msg = await readMessage(response.data[i].data);
         ids.push(response.data[i].key);
         if (msg && !msg.protocol) {
           msgs.push(msg);
