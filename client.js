@@ -267,7 +267,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     gotMessagesHandler = cb;
   };
 
-  const saveReadMessage = async (contact, message, protocol = false) => {
+  const saveReadMessage = async (contact, message, protocol = false, readOnly = false) => {
     let msg = {
       "to": user.getID(),
       "from": contact,
@@ -275,7 +275,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       "timestamp": message.timestamp,
       "status": "received",
     };
-    if (!protocol) {
+    if (!protocol && !readOnly) {
       let save = await db.path(parentChannel).path('/contacts').path(contact).path('messages').path(message.timestamp).put(msg);
       if (saveHandler && typeof saveHandler === 'function') {
         saveHandler({
@@ -283,6 +283,9 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
           "msg": msg
         });
       }
+      return msg;
+    }
+    if (readOnly) {
       return msg;
     }
     if (protocol) {
@@ -295,7 +298,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
     }
   };
 
-  const readMessage = async (env) => {
+  const readMessage = async (env, readOnly=false) => {
     let saved = null;
     let opened = await user.openEnvelope(env);
     if (opened.plaintext && opened.plaintext.init && opened.plaintext.init.from && opened.from !== opened.plaintext.init.from) {
@@ -317,7 +320,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       });
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read, env.protocol || false);
+        saved = await saveReadMessage(opened.from, read, env.protocol || false, readOnly);
         if (!env.protocol) {
           await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
         }
@@ -344,7 +347,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
         });
         if (read) {
           read.timestamp = env.timestamp;
-          saved = await saveReadMessage(opened.from, read, env.protocol || false);
+          saved = await saveReadMessage(opened.from, read, env.protocol || false, readOnly);
           if (!env.protocol) {
             await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
           }
@@ -371,7 +374,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
       });
       if (read) {
         read.timestamp = env.timestamp;
-        saved = await saveReadMessage(opened.from, read, env.protocol || false);
+        saved = await saveReadMessage(opened.from, read, env.protocol || false, readOnly);
         if (!env.protocol) {
           await db.path(parentChannel).path('/contacts').path(opened.from).path('session').put(session.save());
         }
@@ -425,7 +428,7 @@ function Messages(encryption, db, serverURL, userData = null, sock = null, push 
 
     if (sent) {
       await db.path(parentChannel).path('/contacts').path(to).path('session').put(session.save());
-      if (!protocol) {
+      if (!protocol && !composeOnly) {
         await db.path(parentChannel).path('/contacts').path(to).path('messages').path(sent.timestamp).put({
           "to": to,
           "from": user.getID(),
