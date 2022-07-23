@@ -1,6 +1,6 @@
 {
   "name": "@starbase/messages",
-  "version": "0.0.11",
+  "version": "0.0.12",
   "description": "Starbase Messages",
   "main": "index.js",
   "browser":"messages.min.js",
